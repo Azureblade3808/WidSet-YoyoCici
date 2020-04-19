@@ -58,4 +58,4 @@ By reading the only code file `YoyoCici.he`, it is not difficult to tell there i
 
 在我的理解中，应该没有谁会需要这里的代码或图片资源。如果有需要，请私信给我或邮件至`17433201@qq.com`，我会加上一个合适的授权声明。
 
-To my understanding, there should be nobody who needs the code or images in this repository. If there is one, please send me a private message or mail to `17433201@qq.com`, and I will then add a propriate licence.
+To my understanding, there should be nobody who needs the code or images in this repository. If there is one, please send me a private message or mail to `17433201@qq.com`, and I will then add a appropriate licence.
