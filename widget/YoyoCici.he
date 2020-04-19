@@ -1,0 +1,2180 @@
+class YoyoCici {
+	#constants
+	const long DISTANCE_SCALE = 1000000;
+	const long TIME_SCALE = 1000;
+	const long VELOCITY_SCALE = DISTANCE_SCALE / TIME_SCALE;
+	const long ACCELERATION_SCALE = DISTANCE_SCALE / TIME_SCALE / TIME_SCALE;
+	const long RATIO_SCALE = 1000000;
+	const long SCORE_SCALE = 1000;
+	const long RATE_SCALE = 1000000;
+	
+	const long G = 10 * ACCELERATION_SCALE;
+	const long VIRTUE_BG_WIDTH = 10 * DISTANCE_SCALE;
+	const long VIRTUE_BG_HEIGHT = 15 * DISTANCE_SCALE / 2;
+	const long VIRTUE_BG_LEFT = -VIRTUE_BG_WIDTH / 2;
+	const long VIRTUE_BG_RIGHT = VIRTUE_BG_WIDTH / 2;
+	const long VIRTUE_BG_TOP = VIRTUE_BG_HEIGHT;
+	const long VIRTUE_BG_BOTTOM = 0;
+	const long VIRTUE_GROUND_WIDTH = 10 * DISTANCE_SCALE;
+	const long VIRTUE_GROUND_HEIGHT = 5 * DISTANCE_SCALE;
+	const long VIRTUE_BIG_BALL_RADIUS = 3 * DISTANCE_SCALE / 8;
+	const long VIRTUE_SMALL_BALL_RADIUS = DISTANCE_SCALE / 4;
+	const long VIRTUE_CHARACTER_WIDTH = DISTANCE_SCALE;
+	const long VIRTUE_CHARACTER_HEIGHT = 3 * DISTANCE_SCALE / 2;
+	const long VIRTUE_CHARACTER_VELOCITY = 6 * VELOCITY_SCALE;
+	const long VIRTUE_MAX_BONUS_VELOCITY = 2 * VELOCITY_SCALE;
+	
+	const int SCORE_DIGITS = 6;
+	const int MAX_SCORE = 999999;
+	const int FULL_LIVES = 5;
+	const int MAX_BALLS = 8;
+	const int MAX_SPEED_RATIO = 2 * RATIO_SCALE;
+	const long START_COUNTDOWN = 2 * TIME_SCALE;
+	const long NEW_BALL_INTERVAL = 5 * TIME_SCALE;
+	const long HIT_RECOVERY_DURATION = 2 * TIME_SCALE;
+	const long BONUS_DROP_RATE = RATE_SCALE / 5 / TIME_SCALE;
+	
+	const int ICON_PEACH = 0;
+	const int ICON_LEMON = 1;
+	const int ICON_APPLE = 2;
+	const int ICON_BANANA = 3;
+	const int ICON_HEART = 4;
+	const int ICON_SHIELD = 5;
+	
+	const int BONUS_LIFE = 0;
+	const int BONUS_SCORE = 1;
+	const int BONUS_SPEED_DOWN = 2;
+	const int BONUS_SHIELD = 3;
+	
+	const int CHARACTER_INVISIBLE = 0;
+	const int CHARACTER_MOVE_1 = 1;
+	const int CHARACTER_MOVE_2 = 2;
+	const int CHARACTER_STUN_1 = 3;
+	const int CHARACTER_STUN_2 = 4;
+	const int CHARACTER_STUN_3 = 5;
+	const int CHARACTER_HURT = 3;
+	const int CHARACTER_DOWN = 4;
+	
+	const int BALL_ICON_SIZE = 21;
+	const int BALL_7 = 0;
+	const int BALL_9 = 1;
+	const int BALL_11 = 2;
+	const int BALL_13 = 3;
+	const int BALL_15 = 4;
+	const int BALL_21 = 5;
+	#end
+	
+	#variables
+	IndexFrame indexFrame = null;
+	SelectFrame selectFrame = null;
+	GameFrame gameFrame = null;
+	int volumn = 10;
+	boolean debugMode = true;
+	#end
+	
+	#interface
+	void startWidget() {
+		setMinimizedView(createView("min", null));
+	}
+	
+	Shell openWidget() {
+		indexFrame = IndexFrame_create();
+		pushShell(indexFrame.toShell());
+		//selectFrame = SelectFrame_create();
+		//pushShell(selectFrame.toShell());
+		//gameFrame = GameFrame_create();
+		//pushShell(gameFrame.toShell());
+		return null;
+	}
+	
+	void closeWidget() {
+		Styles_clearCache();
+		Images_clearCache();
+		
+		if(indexFrame != null) {
+			indexFrame.destroy();
+			indexFrame = null;
+		}
+		if(selectFrame != null) {
+			selectFrame.destroy();
+			selectFrame = null;
+		}
+		if(gameFrame != null) {
+			gameFrame.destroy();
+			gameFrame = null;
+		}
+	}
+	
+	void stopWidget() {
+		closeWidget();
+	}
+	
+	void actionPerformed(Shell shell, Component source, int action) {
+		switch(action) {
+			case Commands_getCommand("back"):
+			{
+				popShell(shell);
+				return;
+			}
+			
+			case SHELL_CLOSED:
+			{
+				if(indexFrame != null && shell == indexFrame.toShell()) {
+					indexFrame.destroy();
+					indexFrame = null;
+				}
+				if(selectFrame != null && shell == selectFrame.toShell()) {
+					selectFrame.destroy();
+					selectFrame = null;
+				}
+				if(gameFrame != null && shell == gameFrame.toShell()) {
+					gameFrame.destroy();
+					gameFrame = null;
+				}
+				return;
+			}
+		}
+	}
+	
+	MenuItem getSoftKey(Shell shell, Component focused, int key) {
+		if(key == SOFTKEY_BACK) {
+			return new MenuItem(Commands_getCommand("back"), Locale_localize("Back"));
+		}
+		return null;
+	}
+	
+	boolean keyAction(Component focused, int op, int key) {
+		return false;
+	}
+	#end
+	
+	#methods
+	//Test passed.
+	long sqrt(long a) {
+		long root = 0;
+		long remain = 0;
+		long divisor = 0;
+		for(long i = 0; i < 64; i += 2) {
+			root <<= 1;
+			remain = ((remain << 2) + ((a >> (62 - i)) & 3));
+			divisor = (root << 1) + 1;
+			if(divisor <= remain) {
+				remain -= divisor;
+				root++;
+			}
+		}
+		return root;
+	}
+	
+	//Test passed.
+	long, boolean mirror(long x, long l, long r) {
+		if(l == r) {
+			return l, false;
+		}
+		
+		if(l > r) {
+			long temp = l;
+			l = r;
+			r = temp;
+		}
+		
+		long w = r - l;
+		int newX = r - abs(abs((x - l) % (w * 2)) - w);
+		boolean change = ((x - l) / w + (x - l < 0)) & 1;
+		return newX, change;
+	}
+	
+	//Test passed.
+	long scale(long value, long oldBorder1, long oldBorder2, long newBorder1, long newBorder2) {
+		long oldWidth = abs(oldBorder1 - oldBorder2);
+		long newWidth = abs(newBorder1 - newBorder2);
+		
+		if(newBorder1 < newBorder2) {
+			if(oldBorder1 < oldBorder2) {
+				return ((value - oldBorder1) * newWidth * 2 / oldWidth + 1) / 2 + newBorder1;
+			}
+			else if(oldBorder1 > oldBorder2) {
+				return newBorder2 - ((value - oldBorder2) * newWidth * 2 / oldWidth + 1) / 2;
+			}
+			else {
+				if(value < oldBorder1) {
+					return newBorder1;
+				}
+				else if(value > oldBorder1) {
+					return newBorder2;
+				}
+				else {
+					return (newBorder1 + newBorder2) / 2;
+				}
+			}
+		}
+		else if(newBorder1 > newBorder2) {
+			if(oldBorder1 < oldBorder2) {
+				return newBorder1 - ((value - oldBorder1) * newWidth * 2 / oldWidth + 1) / 2;
+			}
+			else if(oldBorder1 > oldBorder2) {
+				return ((value - oldBorder2) * newWidth * 2 / oldWidth + 1) / 2 + newBorder2;
+			}
+			else {
+				if(value < oldBorder1) {
+					return newBorder1;
+				}
+				else if(value > oldBorder1) {
+					return newBorder2;
+				}
+				else {
+					return (newBorder1 + newBorder2) / 2;
+				}
+			}
+		}
+		else {
+			return newBorder1;
+		}
+	}
+	#end
+	
+	#class Locale
+	Value Locale_strings = [];
+	String Locale_language;
+	
+	void Locale_initialize() {
+		Locale_language = getParameter("language");
+	}
+	
+	String Locale_localize(String origin) {
+		if(Locale_language == null) {
+			Locale_initialize();
+		}
+		
+		String localized = Locale_strings[Locale_language][origin];
+		if(localized.equals("")) {
+			localized = origin;
+		}
+		return localized;
+	}
+	#end
+	
+	#class Commands
+	final Map Commands_map = new Map();
+	int Commands_next = 1;
+	
+	int Commands_getCommand(String name) {
+		if(Commands_map.containsKey(name)) {
+			return Value(Commands_map[name]);
+		}
+		else {
+			return (Commands_map[name] = Value(Commands_next++));
+		}
+	}
+	
+	String Commands_getName(long command) {
+		List keys = Commands_map.keys();
+		List values = Commands_map.values();
+		for(int i = 0; i < Commands_map.size(); i++) {
+			if(int(Value(values[i])) == command) {
+				return keys[i];
+			}
+		}
+		return null;
+	}
+	#end
+	
+	#class Styles
+	final Map Styles_map = new Map();
+	
+	Style Styles_getStyle(String name) {
+		if(Styles_map.containsKey(name)) {
+			return Styles_map[name];
+		}
+		else {
+			return (Styles_map[name] = getStyle(name));
+		}
+	}
+	
+	void Styles_clearCache() {
+		Styles_map.clear();
+	}
+	#end
+	
+	#class Images
+	final Map Images_map = new Map();
+	
+	Image Images_getImage(String name) {
+		if(Images_map.containsKey(name)) {
+			return Images_map[name];
+		}
+		else {
+			return (Images_map[name] = getImage(name));
+		}
+	}
+	
+	void Images_clearCache() {
+		Images_map.clear();
+	}
+	#end
+	
+	#class RealTimeSlide
+	/*
+	struct RealTimeSlide {
+		RealTimeSlide$destroy destroy;
+		RealTimeSlide$add add;
+		RealTimeSlide$getCurrent getCurrent;
+		RealTimeSlide$getAll getAll;
+		RealTimeSlide$resetTimer resetTimer;
+		RealTimeSlide$clear clear;
+		RealTimeSlide$tostring tostring;
+	}
+	typedef void RealTimeSlide$destroy();
+	typedef RealTimeSlide RealTimeSlide$add(Object obecjt, long duration);
+	typedef Object RealTimeSlide$getCurrent();
+	typedef List RealTimeSlide$getAll();
+	typedef RealTimeSlide RealTimeSlide$resetTimer();
+	typedef RealTimeSlide RealTimeSlide$clear();
+	typedef String RealTimeSlide$tostring();
+	
+	RealTimeSlide RealTimeSlide_create() {
+		RealTimeSlide this = null;
+		List objects = null;
+		int count = 0;
+		Value durations = null;
+		long fullDuration = 0;
+		long timestamp = 0;
+		
+		this = new RealTimeSlide();
+		{
+			objects = new List();
+			durations = [];
+			timestamp = currentTimeMillis();
+			
+			this.destroy = $destroy;
+			this.add = $add;
+			this.getCurrent = $getCurrent;
+			this.getAll = $getAll;
+			this.resetTimer = $resetTimer;
+			this.clear = $clear;
+			this.tostring = $tostring;
+		}
+		return this;
+		
+		void $destroy() {
+			this.destroy = null;
+			this.add = null;
+			this.getCurrent = null;
+			this.getAll = null;
+			this.resetTimer = null;
+			this.clear = null;
+			this.tostring = null;
+			this = null;
+			
+			objects.clear();
+			objects = null;
+			
+			durations = null;
+		}
+		
+		RealTimeSlide $add(Object object, long duration) {
+			if(duration > 0) {
+				objects.add(object);
+				count++;
+				durations.add(Value(duration));
+				fullDuration += duration;
+			}
+			return this;
+		}
+		
+		Object $getCurrent() {
+			long offset = (currentTimeMillis() - timestamp) % fullDuration;
+			for(int i = 0; i < count; i++) {
+				if((offset -= long(durations[i])) < 0) {
+					return objects[i];
+				}
+			}
+			return null;
+		}
+		
+		List $getAll() {
+			List list = new List();
+			foreach(Object object : objects) {
+				list.add(object);
+			}
+			return list;
+		}
+		
+		RealTimeSlide $resetTimer() {
+			timestamp = currentTimeMillis();
+			return this;
+		}
+		
+		RealTimeSlide $clear() {
+			objects.clear();
+			count = 0;
+			durations = [];
+			fullDuration = 0;
+			return this;
+		}
+		
+		String $tostring() {
+			Buffer buffer = new Buffer().append("[RealTimeSlide](");
+			for(int i = 0; i < count; i++) {
+				buffer.append("(").append(objects[i]).append(", ").append(durations[i]).append(")");
+				if(i < count - 1) {
+					buffer.append(", ");
+				}
+			}
+			buffer.append(")");
+			return buffer;
+		}
+	}
+	*/
+	#end
+	
+	#class Slide
+	struct Slide {
+		Slide$destroy destroy;
+		Slide$add add;
+		Slide$getCurrent getCurrent;
+		Slide$getAll getAll;
+		Slide$resetTimer resetTimer;
+		Slide$elapse elapse;
+		Slide$clear clear;
+		Slide$tostring tostring;
+	}
+	typedef void Slide$destroy();
+	typedef Slide Slide$add(Object obecjt, long duration);
+	typedef Object Slide$getCurrent();
+	typedef List Slide$getAll();
+	typedef Slide Slide$resetTimer();
+	typedef Slide Slide$elapse(long time);
+	typedef Slide Slide$clear();
+	typedef String Slide$tostring();
+	
+	Slide Slide_create() {
+		Slide this = null;
+		List objects = null;
+		int count = 0;
+		Value durations = null;
+		long fullDuration = 0;
+		long timeOffset = 0;
+		
+		this = new Slide();
+		{
+			objects = new List();
+			durations = [];
+			
+			this.destroy = $destroy;
+			this.add = $add;
+			this.getCurrent = $getCurrent;
+			this.getAll = $getAll;
+			this.resetTimer = $resetTimer;
+			this.elapse = $elapse;
+			this.clear = $clear;
+			this.tostring = $tostring;
+		}
+		return this;
+		
+		void $destroy() {
+			this.destroy = null;
+			this.add = null;
+			this.getCurrent = null;
+			this.getAll = null;
+			this.resetTimer = null;
+			this.clear = null;
+			this.tostring = null;
+			this = null;
+			
+			objects.clear();
+			objects = null;
+			
+			durations = null;
+		}
+		
+		Slide $add(Object object, long duration) {
+			if(duration > 0) {
+				objects.add(object);
+				count++;
+				durations.add(Value(duration));
+				fullDuration += duration;
+			}
+			return this;
+		}
+		
+		Object $getCurrent() {
+			long offset = timeOffset % fullDuration;
+			for(int i = 0; i < count; i++) {
+				if((offset -= long(durations[i])) < 0) {
+					return objects[i];
+				}
+			}
+			return null;
+		}
+		
+		List $getAll() {
+			List list = new List();
+			foreach(Object object : objects) {
+				list.add(object);
+			}
+			return list;
+		}
+		
+		Slide $resetTimer() {
+			timeOffset = 0;
+			return this;
+		}
+		
+		Slide $clear() {
+			objects.clear();
+			count = 0;
+			durations = [];
+			fullDuration = 0;
+			timeOffset = 0;
+			return this;
+		}
+		
+		Slide $elapse(long time) {
+			timeOffset += time;
+			return this;
+		}
+		
+		String $tostring() {
+			Buffer buffer = new Buffer().append("[Slide](");
+			for(int i = 0; i < count; i++) {
+				buffer.append("(").append(objects[i]).append(", ").append(durations[i]).append(")");
+				if(i < count - 1) {
+					buffer.append(", ");
+				}
+			}
+			buffer.append(")");
+			return buffer;
+		}
+	}
+	#end
+	
+	#class Ball
+	struct Ball {
+		Ball$destroy destroy;
+		Ball$getX getX;
+		Ball$getY getY;
+		Ball$getPosition getPosition;
+		Ball$elapse elapse;
+		Ball$tostring tostring;
+	}
+	typedef void Ball$destroy();
+	typedef long Ball$getX();
+	typedef long Ball$getY();
+	typedef long, long Ball$getPosition();
+	typedef void Ball$elapse(long time);
+	typedef String Ball$tostring();
+	
+	Ball Ball_create(long x, long y, long vx, long maxHeight, long leftBorder, long rightBorder) {
+		Buffer errorMessage = new Buffer();
+		if(x < leftBorder) {
+			errorMessage.append("x < leftBorder; ");
+		}
+		if(x > rightBorder) {
+			errorMessage.append("x > rightBorder; ");
+		}
+		if(leftBorder >= rightBorder) {
+			errorMessage.append("leftBorder >= rightBorder; ");
+		}
+		if(y > maxHeight) {
+			errorMessage.append("y > maxHeight; ");
+		}
+		if(y < 0) {
+			errorMessage.append("y < 0; ");
+		}
+		if(maxHeight <= 0) {
+			errorMessage.append("maxHeight <= 0; ");
+		}
+		if(errorMessage.length() > 0) {
+			printf("%s", errorMessage);
+			return null;
+		}
+		
+		Ball this = null;
+		long fullDropDuration = 0;
+		long timeOffset = 0;
+		long doubleWidth = 0;
+		
+		this = new Ball();
+		{
+			fullDropDuration = sqrt(maxHeight * 2 / G);
+			maxHeight = G * fullDropDuration * fullDropDuration / 2;
+			if(y > maxHeight) {
+				y = maxHeight;
+			}
+			
+			long dropDistance = maxHeight - y;
+			long dropDuration = sqrt(dropDistance * 2 / G);
+			if(dropDuration == 0) {
+				timeOffset = 0;
+			}
+			else {
+				timeOffset = fullDropDuration * 2 - dropDuration;
+			}
+			
+			//Fix horizontal coordinate onto horinzontal grids.
+			dropDistance = G * dropDuration * dropDuration / 2;
+			y = maxHeight - dropDistance;
+			
+			this.destroy = $destroy;
+			this.getX = $getX;
+			this.getY = $getY;
+			this.getPosition = $getPosition;
+			this.elapse = $elapse;
+			this.tostring = $tostring;
+		}
+		return this;
+		
+		void $destroy() {
+			this.destroy = null;
+			this.getX = null;
+			this.getY = null;
+			this.getPosition = null;
+			this.elapse = null;
+			this.tostring = null;
+			this = null;
+		}
+		
+		long $getX() {
+			return x;
+		}
+		
+		long $getY() {
+			long dropDuration = fullDropDuration - abs(timeOffset - fullDropDuration);
+			return maxHeight - G * dropDuration * dropDuration / 2;
+		}
+		
+		long, long $getPosition() {
+			return x, $getY();
+		}
+		
+		void $elapse(long time) {
+			timeOffset = (timeOffset + time) % (fullDropDuration * 2);
+			
+			x, boolean change = mirror(x + vx * time, leftBorder, rightBorder);
+			if(change) {
+				vx = -vx;
+			}
+		}
+		
+		String $tostring() {
+			return
+				new Buffer()
+				.append("[Ball]x: ")
+				.append(x)
+				.append(", y: ")
+				.append($getY())
+				.append(", left: ")
+				.append(leftBorder)
+				.append(", right: ")
+				.append(rightBorder)
+				.append(", top: ")
+				.append(maxHeight)
+				.append(", fullDropDuration: ")
+				.append(fullDropDuration)
+				.append(", timeOffset: ")
+				.append(timeOffset)
+			;
+		}
+	}
+	#end
+	
+	#class Character
+	struct Character {
+		Character$destroy destroy;
+		Character$getPosition getPosition;
+		Character$moveLeft moveLeft;
+		Character$moveRight moveRight;
+		Character$reset reset;
+		Character$tostring tostring;
+	}
+	typedef void Character$destroy();
+	typedef long Character$getPosition();
+	typedef void Character$moveLeft(long duration);
+	typedef void Character$moveRight(long duration);
+	typedef void Character$reset();
+	typedef String Character$tostring();
+	
+	Character Character_create() {
+		Character this = null;
+		long position = 0;
+		long leftBorder = 0;
+		long rightBorder = 0;
+		
+		this = new Character();
+		{
+			leftBorder = (VIRTUE_CHARACTER_WIDTH - VIRTUE_GROUND_WIDTH) / 2;
+			rightBorder = (VIRTUE_GROUND_WIDTH - VIRTUE_CHARACTER_WIDTH) / 2;
+			
+			this.destroy = $destroy;
+			this.getPosition = $getPosition;
+			this.moveLeft = $moveLeft;
+			this.moveRight = $moveRight;
+			this.reset = $reset;
+			this.tostring = $tostring;
+		}
+		return this;
+		
+		void $destroy() {
+			this.destroy = null;
+			this.getPosition = null;
+			this.moveLeft = null;
+			this.moveRight = null;
+			this.reset = null;
+			this.tostring = null;
+			this = null;
+		}
+		
+		long $getPosition() {
+			return position;
+		}
+		
+		void $moveLeft(long duration) {
+			long distance = VIRTUE_CHARACTER_VELOCITY * duration;
+			if((position -= distance) < leftBorder) {
+				position = leftBorder;
+			}
+		}
+		
+		void $moveRight(long duration) {
+			long distance = VIRTUE_CHARACTER_VELOCITY * duration;
+			if((position += distance) > rightBorder) {
+				position = rightBorder;
+			}
+		}
+		
+		void $reset() {
+			position = 0;
+		}
+		
+		String $tostring() {
+			return
+				new Buffer()
+				.append("[Character]position: ")
+				.append(position)
+			;
+		}
+	}
+	#end
+	
+	#class Bonus
+	final Value Bonus_dropRates = [100, 600, 200, 100];
+	const int Bonus_fullRate = 1000;
+	
+	struct Bonus {
+		Bonus$destroy destroy;
+		Bonus$getType getType;
+		Bonus$getX getX;
+		Bonus$getY getY;
+		Bonus$getPosition getPosition;
+		Bonus$elapse elapse;
+		Bonus$tostring tostring;
+	}
+	typedef void Bonus$destroy();
+	typedef int Bonus$getType();
+	typedef long Bonus$getX();
+	typedef long Bonus$getY();
+	typedef long, long Bonus$getPosition();
+	typedef Bonus Bonus$elapse(long time);
+	typedef String Bonus$tostring();
+	
+	Bonus Bonus_create() {
+		Bonus this = null;
+		int type = 0;
+		long x = 0;
+		long y = 0;
+		long velocity = 0;
+		
+		this = new Bonus();
+		{
+			int seed = random(Bonus_fullRate);
+			while((seed -= int(Bonus_dropRates[type])) >= 0) {
+				type++;
+			}
+			
+			x = random(VIRTUE_GROUND_WIDTH - VIRTUE_CHARACTER_WIDTH + 1) - (VIRTUE_GROUND_WIDTH - VIRTUE_CHARACTER_WIDTH) / 2;
+			y = VIRTUE_GROUND_HEIGHT;
+			velocity = random(VIRTUE_MAX_BONUS_VELOCITY / 2) + VIRTUE_MAX_BONUS_VELOCITY;
+			
+			this.destroy = $destroy;
+			this.getType = $getType;
+			this.getX = $getX;
+			this.getY = $getY;
+			this.getPosition = $getPosition;
+			this.elapse = $elapse;
+			this.tostring = $tostring;
+		}
+		return this;
+		
+		void $destroy() {
+			this.destroy = null;
+			this.getType = null;
+			this.getX = null;
+			this.getY = null;
+			this.getPosition = null;
+			this.elapse = null;
+			this.tostring = null;
+			this = null;
+		}
+		
+		int $getType() {
+			return type;
+		}
+		
+		long $getX() {
+			return x;
+		}
+		
+		long $getY() {
+			return y;
+		}
+		
+		long, long $getPosition() {
+			return x, y;
+		}
+		
+		Bonus $elapse(long time) {
+			y -= velocity * time;
+			return this;
+		}
+		
+		String $tostring() {
+			return
+				new Buffer()
+				.append("[Bonus]type: ")
+				.append(type)
+				.append(", x: ")
+				.append(x)
+				.append(", y: ")
+				.append(y)
+			;
+		}
+	}
+	#end
+	
+	#class Status
+	const int Status_normal = 0;
+	const int Status_justHit = 1;
+	const int Status_shielded = 2;
+	const int Status_timeStopped = 3;
+	const int Status_confused = 4;
+	
+	struct Status {
+		Status$destroy destroy;
+		Status$setToNormal setToNormal;
+		Status$setToJustHit setToJustHit;
+		Status$setToShielded setToShielded;
+		Status$setToTimeStopped setToTimeStopped;
+		Status$setToConfused setToConfused;
+		Status$getType getType;
+		Status$getIcon getIcon;
+		Status$getDuration getDuration;
+		Status$elapse elapse;
+		Status$tostring tostring;
+	}
+	typedef void Status$destroy();
+	typedef Status Status$setToNormal();
+	typedef Status Status$setToJustHit(long duration);
+	typedef Status Status$setToShielded(long duration);
+	typedef Status Status$setToTimeStopped(long duration);
+	typedef Status Status$setToConfused(long duration);
+	typedef int Status$getType();
+	typedef int Status$getIcon();
+	typedef long Status$getDuration();
+	typedef Status Status$elapse(long time);
+	typedef String Status$tostring();
+	
+	Status Status_create() {
+		Status this = null;
+		int type = 0;
+		long duration = 0;
+		
+		this = new Status();
+		{
+			$setToNormal();
+			
+			this.destroy = $destroy;
+			this.setToNormal = $setToNormal;
+			this.setToJustHit = $setToJustHit;
+			this.setToShielded = $setToShielded;
+			this.setToTimeStopped = $setToTimeStopped;
+			this.setToConfused = $setToConfused;
+			this.getType = $getType;
+			this.getIcon = $getIcon;
+			this.getDuration = $getDuration;
+			this.elapse = $elapse;
+			this.tostring = $tostring;
+		}
+		return this;
+		
+		void $destroy() {
+			this.destroy = null;
+			this.setToNormal = null;
+			this.setToJustHit = null;
+			this.setToShielded = null;
+			this.setToTimeStopped = null;
+			this.setToConfused = null;
+			this.getType = null;
+			this.getIcon = null;
+			this.getDuration = null;
+			this.elapse = null;
+			this.tostring = null;
+			this = null;
+		}
+		
+		Status $setToNormal() {
+			type = Status_normal;
+			duration = 0;
+			return this;
+		}
+		
+		Status $setToJustHit(long newDuration) {
+			type = Status_justHit;
+			duration = newDuration;
+			return this;
+		}
+		
+		Status $setToShielded(long newDuration) {
+			type = Status_shielded;
+			duration = newDuration;
+			return this;
+		}
+		
+		Status $setToTimeStopped(long newDuration) {
+			type = Status_timeStopped;
+			duration = newDuration;
+			return this;
+		}
+		
+		Status $setToConfused(long newDuration) {
+			type = Status_confused;
+			duration = newDuration;
+			return this;
+		}
+		
+		int $getType() {
+			return type;
+		}
+		
+		int $getIcon() {
+			switch(type) {
+				case Status_shielded:
+				{
+					return ICON_SHIELD;
+				}
+			}
+			
+			return -1;
+		}
+		
+		long $getDuration() {
+			return duration;
+		}
+		
+		Status $elapse(long time) {
+			if((duration -= time) <= 0) {
+				$setToNormal();
+			}
+			return this;
+		}
+		
+		String $tostring() {
+			return
+				new Buffer()
+				.append("[Status]type: ")
+				.append(type)
+				.append(", duration: ")
+				.append(duration)
+			;
+		}
+	}
+	#end
+	
+	#class IndexFrame
+	struct IndexFrame {
+		IndexFrame$destroy destroy;
+		IndexFrame$toShell toShell;
+		IndexFrame$tostring tostring;
+	}
+	typedef void IndexFrame$destroy();
+	typedef Shell IndexFrame$toShell();
+	typedef String IndexFrame$tostring();
+	
+	IndexFrame IndexFrame_create() {
+		IndexFrame this = null;
+		Shell shell = null;
+		Canvas canvas = null;
+		
+		this = new IndexFrame();
+		{
+			canvas = new Canvas(Styles_getStyle("canvas"), $paint);
+			shell = new Shell(canvas);
+			shell[1].setFlags(0);
+			shell.setActionHandler($onAction);
+			shell.setSoftKeyHandler($onSoftKey);
+			
+			this.destroy = $destroy;
+			this.toShell = $toShell;
+			this.tostring = $tostring;
+		}
+		return this;
+		
+		void $destroy() {
+			//...
+		}
+		
+		Shell $toShell() {
+			return shell;
+		}
+		
+		String $tostring() {
+			return
+				new Buffer()
+				.append("[IndexFrame]")
+				.append(this)
+			;
+		}
+		
+		void $paint(Component c, Graphics g, Style style, int width, int height) {
+			Image leftHill = Images_getImage("bg_hill_bottomLeft.png");
+			g.drawImage(leftHill, 0, height - leftHill.height(), 0);
+			
+			Image rightHill = Images_getImage("bg_hill_bottomRight.png");
+			g.drawImage(rightHill, width - rightHill.width(), height - rightHill.height(), 0);
+			
+			Image leftCloud = Images_getImage("bg_cloud_topLeft.png");
+			g.drawImage(leftCloud, 0, 0, 0);
+			
+			Image rightCloud = Images_getImage("bg_cloud_right.png");
+			g.drawImage(rightCloud, width - rightCloud.width(), height / 3 - rightCloud.height(), 0);
+			
+			Image topTree = Images_getImage("bg_tree_topRight.png");
+			g.drawImage(topTree, width - topTree.width(), 0, 0);
+			
+			Image leftTree = Images_getImage("bg_tree_bottomLeft.png");
+			g.drawImage(leftTree, 0, height - leftTree.height(), 0);
+			
+			Image rightTree = Images_getImage("bg_tree_bottomRight.png");
+			g.drawImage(rightTree, width - rightTree.width(), height - rightTree.height(), 0);
+		}
+		
+		void $onAction(Shell shell, Component source, int action) {
+			switch(action) {
+				case Commands_getCommand("ok"):
+				{
+					selectFrame = SelectFrame_create();
+					pushShell(selectFrame.toShell());
+					return;
+				}
+			}
+			
+			actionPerformed(shell, source, action);
+		}
+		
+		MenuItem $onSoftKey(Shell shell, Component focused, int key) {
+			if(key == SOFTKEY_OK) {
+				return new MenuItem(Commands_getCommand("ok"), Locale_localize("OK"));
+			}
+			
+			return getSoftKey(shell, focused, key);
+		}
+	}
+	#end
+	
+	#class SelectFrame
+	struct SelectFrame {
+		SelectFrame$destroy destroy;
+		SelectFrame$toShell toShell;
+		SelectFrame$tostring tostring;
+	}
+	typedef void SelectFrame$destroy();
+	typedef Shell SelectFrame$toShell();
+	typedef String SelectFrame$tostring();
+	
+	SelectFrame SelectFrame_create() {
+		final Value NAMES = ["yoyo", "cici"];
+		
+		SelectFrame this = null;
+		Shell shell = null;
+		Canvas canvas = null;
+		int selected = 0;
+		String name = null;
+		
+		this = new SelectFrame();
+		{
+			canvas = new Canvas(Styles_getStyle("canvas"), $paint);
+			shell = new Shell(canvas);
+			shell[1].setFlags(0);
+			shell.setKeyHandler($onKeyAction);
+			
+			name = NAMES[selected];
+			
+			this.destroy = $destroy;
+			this.toShell = $toShell;
+			this.tostring = $tostring;
+		}
+		return this;
+		
+		void $destroy() {
+			//...
+		}
+		
+		Shell $toShell() {
+			return shell;
+		}
+		
+		String $tostring() {
+			return
+				new Buffer()
+				.append("[SelectFrame]")
+				.append(this)
+			;
+		}
+		
+		void $paint(Component c, Graphics g, Style style, int width, int height) {
+			/*
+			g.setColor(0x69BD6E);
+			g.fillArc(- width / 8, height - width * 17 / 24, width * 11 / 6, width * 19 / 12, 0, 360);
+			g.setColor(0x8FFF5D);
+			g.fillArc(- width / 12, height - width * 3 / 5, width * 3 / 2, width * 4 / 3, 0, 360);
+			*/
+			Image leftHill = Images_getImage("bg_hill_bottomLeft.png");
+			g.drawImage(leftHill, 0, height - leftHill.height(), 0);
+			
+			Image rightHill = Images_getImage("bg_hill_bottomRight.png");
+			g.drawImage(rightHill, width - rightHill.width(), height - rightHill.height(), 0);
+			
+			Image leftCloud = Images_getImage("bg_cloud_topLeft.png");
+			g.drawImage(leftCloud, 0, 0, 0);
+			
+			Image rightCloud = Images_getImage("bg_cloud_right.png");
+			g.drawImage(rightCloud, width - rightCloud.width(), height / 3 - rightCloud.height(), 0);
+			
+			Image frame = Images_getImage("selectFrame.png");
+			g.drawImage(frame, (width - frame.width()) / 2, 0, 0);
+			
+			Image portrait = Images_getImage(format("%s_portrait.png", name));
+			g.drawImage(portrait, (width - portrait.width()) / 2, frame.width() / 2, 0);
+			
+			Image chicken = Images_getImage("chicken.png");
+			g.drawImage(chicken, (width - chicken.width()) / 2, height - chicken.height(), 0);
+		}
+		
+		boolean $onKeyAction(Component focused, int op, int key) {
+			switch(key) {
+				case KEY_LEFT:
+				case '4':
+				{
+					if(op == KEY_PRESSED || op == KEY_REPEATED) {
+						selected = (selected + NAMES.size() - 1) % NAMES.size();
+						name = NAMES[selected];
+						canvas.repaint(false);
+						flushScreen(false);
+					}
+					return true;
+				}
+				
+				case KEY_RIGHT:
+				case '6':
+				{
+					if(op == KEY_PRESSED || op == KEY_REPEATED) {
+						selected = (selected + 1) % NAMES.size();
+						name = NAMES[selected];
+						canvas.repaint(false);
+						flushScreen(false);
+					}
+					return true;
+				}
+				
+				case KEY_FIRE:
+				{
+					if(op == KEY_PRESSED) {
+						gameFrame = GameFrame_create(name);
+						pushShell(gameFrame.toShell());
+						popShell(shell);
+					}
+					return true;
+				}
+			}
+			
+			return keyAction(focused, op, key);
+		}
+	}
+	#end
+	
+	#class GameFrame
+	struct GameFrame {
+		GameFrame$destroy destroy;
+		GameFrame$toShell toShell;
+		GameFrame$tostring tostring;
+	}
+	typedef void GameFrame$destroy();
+	typedef Shell GameFrame$toShell();
+	typedef String GameFrame$tostring();
+	
+	GameFrame GameFrame_create() {
+		return GameFrame_create("cici");
+	}
+	
+	GameFrame GameFrame_create(String characterName) {
+		GameFrame this = null;
+		Shell shell = null;
+		Canvas canvas = null;
+		Character character = null;
+		List bigBalls = null;	//List<Ball>
+		List smallBalls = null;	//List<Ball>
+		List bonuses = null;	//List<Bonus>
+		
+		Slide timeSlide = null;
+		Slide standSlide = null;
+		Slide shieldSlide = null;
+		Slide hitSlide = null;
+		Slide koSlide = null;
+		Slide pauseSlide = null;
+		Slide gameOverSlide = null;
+		
+		int refreshInterval = 0;
+		long speedRatio = 0;
+		Timer timer = null;
+		long lastTimestamp = 0;
+		
+		Status status = null;
+		int score = 0;
+		int lives = 0;
+		int ballCount = 0;
+		long newBallCountdown = 0;
+		boolean stopped = false;
+		boolean paused = false;
+		
+		boolean leftPressed = false;
+		boolean rightPressed = false;
+		
+		Player player = null;
+		
+		this = new GameFrame();
+		{
+			canvas = new Canvas(Styles_getStyle("canvas"), $paint).setPreferredSize(-100, -100);
+			shell = new Shell(canvas);
+			shell.setActionHandler($onAction);
+			shell.setKeyHandler($onKeyAction);
+			shell.setMenuHandler($onMenu);
+			shell.setSoftKeyHandler($onSoftKey);
+			
+			character = Character_create();
+			bigBalls = new List();
+			smallBalls = new List();
+			bonuses = new List();
+			
+			timeSlide = Slide_create()
+				.add(Value(1), 10000)
+				.add(Value(2), 20000)
+				.add(Value(3), 20000)
+				.add(Value(4), 10000)
+				.add(Value(5), 20000)
+				.add(Value(6), 20000)
+				.add(Value(7), 10000)
+				.add(Value(8), 10000)
+			;
+			standSlide = Slide_create().add(Value(CHARACTER_MOVE_1), 500).add(Value(CHARACTER_MOVE_2), 500);
+			shieldSlide =
+				Slide_create()
+				.add(Value(CHARACTER_INVISIBLE), 200)
+				.add(Value(CHARACTER_MOVE_1), 300)
+				.add(Value(CHARACTER_INVISIBLE), 200)
+				.add(Value(CHARACTER_MOVE_2), 300)
+			;
+			hitSlide =
+				Slide_create()
+				.add(Value(CHARACTER_INVISIBLE), 200)
+				.add(Value(CHARACTER_STUN_1), 200)
+				.add(Value(CHARACTER_STUN_2), 200)
+				.add(Value(CHARACTER_STUN_3), 200)
+			;
+			koSlide =
+				Slide_create()
+				.add(Value(CHARACTER_STUN_1), 200)
+				.add(Value(CHARACTER_STUN_2), 200)
+				.add(Value(CHARACTER_STUN_3), 200)
+			;
+			pauseSlide =
+				Slide_create()
+				.add(Images_getImage("paused_0.png"), 200)
+				.add(Images_getImage("paused_1.png"), 200)
+				.add(Images_getImage("paused_2.png"), 200)
+				.add(Images_getImage("paused_3.png"), 1000)
+				.add(Images_getImage("paused_2.png"), 200)
+				.add(Images_getImage("paused_1.png"), 200)
+			;
+			gameOverSlide =
+				Slide_create()
+				.add(Images_getImage("gameOver_0.png"), 200)
+				.add(Images_getImage("gameOver_1.png"), 200)
+				.add(Images_getImage("gameOver_2.png"), 200)
+				.add(Images_getImage("gameOver_3.png"), 1000)
+				.add(Images_getImage("gameOver_2.png"), 200)
+				.add(Images_getImage("gameOver_1.png"), 200)
+			;
+			
+			status = Status_create();
+			$reset();
+			
+			refreshInterval = 1;
+			lastTimestamp = currentTimeMillis();
+			$startTimer();
+			
+			/*
+			player = getPlayer(characterName + ".mid", volumn);
+			if(player != null) {
+				player.setLoopCount(-1);
+				player.start();
+			}
+			*/
+			
+			this.destroy = $destroy;
+			this.toShell = $toShell;
+			this.tostring = $tostring;
+		}
+		return this;
+		
+		void $destroy() {
+			$stopTimer();
+			
+			this.destroy = null;
+			this.toShell = null;
+			this.tostring = null;
+			this = null;
+			
+			character.destroy();
+			character = null;
+			
+			foreach(Ball ball : bigBalls) {
+				ball.destroy();
+			}
+			bigBalls.clear();
+			bigBalls = null;
+			
+			foreach(Ball ball : smallBalls) {
+				ball.destroy();
+			}
+			smallBalls.clear();
+			smallBalls = null;
+			
+			foreach(Bonus bonus : bonuses) {
+				bonus.destroy();
+			}
+			bonuses.clear();
+			bonuses = null;
+			
+			standSlide.destroy();
+			standSlide = null;
+			
+			shieldSlide.destroy();
+			shieldSlide = null;
+			
+			hitSlide.destroy();
+			hitSlide = null;
+			
+			koSlide.destroy();
+			koSlide = null;
+			
+			pauseSlide.destroy();
+			pauseSlide = null;
+			
+			gameOverSlide.destroy();
+			gameOverSlide = null;
+			
+			status.destroy();
+			status = null;
+			
+			if(player != null) {
+				player.close();
+				player = null;
+			}
+		}
+		
+		Shell $toShell() {
+			return shell;
+		}
+		
+		String $tostring() {
+			return null;
+		}
+		
+		void $onAction(Shell shell, Component source, int action) {
+			switch(action) {
+				case Commands_getCommand("resume"):
+				{
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("restart"):
+				{
+					$reset();
+					return;
+				}
+				
+				case Commands_getCommand("addRandomBall"):
+				{
+					$addRandomBall();
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("addBigBall"):
+				{
+					$addBigBall();
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("addSmallBall"):
+				{
+					$addSmallBall();
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("clearBalls"):
+				{
+					$clearBalls();
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("unlimited"):
+				{
+					refreshInterval = 1;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("100fps"):
+				{
+					refreshInterval = 10;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("50fps"):
+				{
+					refreshInterval = 20;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("40fps"):
+				{
+					refreshInterval = 25;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("25fps"):
+				{
+					refreshInterval = 40;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("20fps"):
+				{
+					refreshInterval = 50;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("10fps"):
+				{
+					refreshInterval = 100;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("x2.00"):
+				{
+					speedRatio = 2 * RATIO_SCALE;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("x1.75"):
+				{
+					speedRatio = 7 * RATIO_SCALE / 4;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("x1.50"):
+				{
+					speedRatio = 3 * RATIO_SCALE / 2;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("x1.25"):
+				{
+					speedRatio = 5 * RATIO_SCALE / 4;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("x1.00"):
+				{
+					speedRatio = RATIO_SCALE;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("x0.75"):
+				{
+					speedRatio = 3 * RATIO_SCALE / 4;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("x0.50"):
+				{
+					speedRatio = RATIO_SCALE / 2;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("x0.25"):
+				{
+					speedRatio = RATIO_SCALE / 4;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("volumn100"):
+				{
+					volumn = 100;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("volumn90"):
+				{
+					volumn = 90;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("volumn80"):
+				{
+					volumn = 80;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("volumn70"):
+				{
+					volumn = 70;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("volumn60"):
+				{
+					volumn = 60;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("volumn50"):
+				{
+					volumn = 50;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("volumn40"):
+				{
+					volumn = 40;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("volumn30"):
+				{
+					volumn = 30;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("volumn20"):
+				{
+					volumn = 20;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("volumn10"):
+				{
+					volumn = 10;
+					$resume();
+					return;
+				}
+				
+				case Commands_getCommand("volumn0"):
+				{
+					volumn = 0;
+					$resume();
+					return;
+				}
+			}
+			
+			actionPerformed(shell, source, action);
+		}
+		
+		boolean $onKeyAction(Component focused, int op, int key) {
+			switch(key) {
+				case KEY_LEFT:
+				case '4':
+				{
+					if(op == KEY_PRESSED) {
+						leftPressed = true;
+					}
+					else if(op == KEY_RELEASED) {
+						leftPressed = false;
+					}
+					return true;
+				}
+				
+				case KEY_RIGHT:
+				case '6':
+				{
+					if(op == KEY_PRESSED) {
+						rightPressed = true;
+					}
+					else if(op == KEY_RELEASED) {
+						rightPressed = false;
+					}
+					return false;
+				}
+			}
+			
+			return false;
+		}
+		
+		Menu $onMenu(Shell shell, Component focused) {
+			if(!stopped) {
+				$pause();
+			}
+			leftPressed = false;
+			rightPressed = false;
+			
+			Menu menu = new Menu()
+				.add(Commands_getCommand("resume"), Locale_localize("Resume"))
+				.add(Commands_getCommand("restart"), Locale_localize("Restart"))
+				.begin(Commands_getCommand("ball"), Locale_localize("Ball"))
+					.add(Commands_getCommand("addRandomBall"), Locale_localize("Add a random ball"))
+					.add(Commands_getCommand("addBigBall"), Locale_localize("Add a big ball"))
+					.add(Commands_getCommand("addSmallBall"), Locale_localize("Add a small ball"))
+					.add(Commands_getCommand("clearBalls"), Locale_localize("Clear"))
+				.end()
+				.begin(Commands_getCommand("refreshRate"), Locale_localize("Refresh Rate"))
+					.add(Commands_getCommand("unlimited fps"), Locale_localize("Unlimited"))
+					.add(Commands_getCommand("100fps"), Locale_localize("100 FPS"))
+					.add(Commands_getCommand("50fps"), Locale_localize("50 FPS"))
+					.add(Commands_getCommand("40fps"), Locale_localize("40 FPS"))
+					.add(Commands_getCommand("25fps"), Locale_localize("25 FPS"))
+					.add(Commands_getCommand("20fps"), Locale_localize("20 FPS"))
+					.add(Commands_getCommand("10fps"), Locale_localize("10 FPS"))
+				.end()
+				.begin(Commands_getCommand("speedRate"), Locale_localize("Speed Rate"))
+					.add(Commands_getCommand("x2.00"), Locale_localize("x2.00"))
+					.add(Commands_getCommand("x1.75"), Locale_localize("x1.75"))
+					.add(Commands_getCommand("x1.50"), Locale_localize("x1.50"))
+					.add(Commands_getCommand("x1.25"), Locale_localize("x1.25"))
+					.add(Commands_getCommand("x1.00"), Locale_localize("x1.00"))
+					.add(Commands_getCommand("x0.75"), Locale_localize("x0.75"))
+					.add(Commands_getCommand("x0.50"), Locale_localize("x0.50"))
+					.add(Commands_getCommand("x0.25"), Locale_localize("x0.25"))
+				.end()
+				.begin(Commands_getCommand("volumn"), Locale_localize("Volumn"))
+					.add(Commands_getCommand("volumn100"), Locale_localize("100"))
+					.add(Commands_getCommand("volumn90"), Locale_localize("90"))
+					.add(Commands_getCommand("volumn80"), Locale_localize("80"))
+					.add(Commands_getCommand("volumn70"), Locale_localize("70"))
+					.add(Commands_getCommand("volumn60"), Locale_localize("60"))
+					.add(Commands_getCommand("volumn50"), Locale_localize("50"))
+					.add(Commands_getCommand("volumn40"), Locale_localize("40"))
+					.add(Commands_getCommand("volumn30"), Locale_localize("30"))
+					.add(Commands_getCommand("volumn20"), Locale_localize("20"))
+					.add(Commands_getCommand("volumn10"), Locale_localize("10"))
+					.add(Commands_getCommand("volumn0"), Locale_localize("0"))
+				.end()
+				.reset()
+				.enable(Commands_getCommand("resume"), !stopped)
+				.enable(Commands_getCommand("ball"), debugMode)
+				.enable(Commands_getCommand("refreshRate"), debugMode)
+				.enable(Commands_getCommand("speedRate"), debugMode)
+				.enable(Commands_getCommand("volumn"), debugMode)
+			;
+			
+			
+			return menu;
+		}
+		
+		MenuItem $onSoftKey(Shell shell, Component focused, int key) {
+			if(key == SOFTKEY_OK) {
+				return new MenuItem(OPEN_MENU, Locale_localize("Options"));
+			}
+			
+			return getSoftKey(shell, focused, key);
+		}
+		
+		void $paint(Component c, Graphics g, Style style, int width, int height) {
+			long timestamp = currentTimeMillis();
+			long interval = (timestamp - lastTimestamp) * TIME_SCALE / 1000;
+			//printf("%l", interval);
+			lastTimestamp = timestamp;
+			int statusType = status.getType();
+			
+			int bgWidth = 0;
+			int bgHeight = 0;
+			int horizon = 0;
+			int bigBallIcon = 0;
+			int smallBallIcon = 0;
+			int characterSize = 0;
+			int fontWidth = 0;
+			int fontHeight = 0;
+			int iconSize = 0;
+			
+			int canvasWidth, int canvasHeight = canvas.getSize();
+			if(false) {}
+			/*
+			*/
+			else if(canvasWidth >= 280 && canvasHeight >= 210) {
+				bgWidth = 280;
+				bgHeight = 210;
+				horizon = 6;
+				bigBallIcon = BALL_21;
+				smallBallIcon = BALL_15;
+				characterSize = 35;
+				fontWidth = 9;
+				fontHeight = 13;
+				iconSize = 17;
+			}
+			else if(canvasWidth >= 200 && canvasHeight >= 150) {
+				bgWidth = 200;
+				bgHeight = 150;
+				horizon = 4;
+				bigBallIcon = BALL_15;
+				smallBallIcon = BALL_11;
+				characterSize = 25;
+				fontWidth = 7;
+				fontHeight = 11;
+				iconSize = 13;
+			}
+			else if(canvasWidth >= 160 && canvasHeight >= 120) {
+				bgWidth = 160;
+				bgHeight = 120;
+				horizon = 3;
+				bigBallIcon = BALL_13;
+				smallBallIcon = BALL_9;
+				characterSize = 21;
+				fontWidth = 5;
+				fontHeight = 9;
+				iconSize = 11;
+			}
+			else {
+				bgWidth = 120;
+				bgHeight = 90;
+				horizon = 3;
+				bigBallIcon = BALL_9;
+				smallBallIcon = BALL_7;
+				characterSize = 15;
+				fontWidth = 5;
+				fontHeight = 7;
+				iconSize = 9;
+			}
+			Image bgImage = Images_getImage(format("bg%i_%ix%i.png", int(Value(timeSlide.getCurrent())), bgWidth, bgHeight));
+			Image bigBallImage = Images_getImage("balls.png")
+				.getRegion(BALL_ICON_SIZE * bigBallIcon, 0, BALL_ICON_SIZE, BALL_ICON_SIZE)
+			;
+			Image smallBallImage = Images_getImage("balls.png")
+				.getRegion(BALL_ICON_SIZE * smallBallIcon, 0, BALL_ICON_SIZE, BALL_ICON_SIZE)
+			;
+			Image fullCharacterImage = Images_getImage(format("%s_%i.png", characterName, characterSize));
+			Image characterImage = null;
+			{
+				int icon = 0;
+				
+				if(stopped) {
+					icon = Value(koSlide.elapse(interval).getCurrent());
+				}
+				else if(statusType == Status_justHit) {
+					icon = Value(hitSlide.elapse(interval).getCurrent());
+				}
+				else if(statusType == Status_shielded) {
+					icon = Value(shieldSlide.elapse(interval).getCurrent());
+				}
+				else {
+					icon = Value(standSlide.getCurrent());
+				}
+				
+				if(icon != CHARACTER_INVISIBLE) {
+					characterImage = fullCharacterImage.getRegion(characterSize * icon, 0, characterSize, characterSize);
+				}
+			}
+			Image iconsImage = Images_getImage(format("icons_%i.png", iconSize));
+			Image heartImage = iconsImage.getRegion(iconSize * ICON_HEART, 0, iconSize, iconSize);
+			Image fontImage = Images_getImage(format("font_%ix%i.png", fontWidth, fontHeight));
+			
+			int bgLeft = (canvasWidth - bgWidth) / 2;
+			int bgRight = bgLeft + bgWidth - 1;
+			int bgTop = (canvasHeight - bgHeight) / 2;
+			int bgBottom = bgTop + bgHeight - 1;
+			
+			g.drawImage(bgImage, bgLeft, bgTop, 0);
+			
+			for(int i = 0; i < lives; i++) {
+				g.drawImage(heartImage, bgLeft + iconSize * i, bgTop, 0);
+			}
+			
+			int statusIcon = status.getIcon();
+			if(statusIcon >= 0) {
+				Image statusImage = iconsImage.getRegion(iconSize * statusIcon, 0, iconSize, iconSize);
+				int statusX = (canvasWidth - iconSize - fontWidth * 3) / 2;
+				int statusY = bgTop;
+				g.drawImage(statusImage, statusX, statusY, 0);
+				
+				int baseX = statusX + iconSize + fontWidth * 2;
+				long duration = status.getDuration() * 100 / TIME_SCALE;
+				for(int i = 0; i < 3; i++) {
+					Image image = fontImage.getRegion(fontWidth * (duration % 10), 0, fontWidth, fontHeight);
+					int x = baseX - fontWidth * i;
+					int y = bgTop;
+					g.drawImage(image, x, y, 0);
+					duration /= 10;
+				}
+			}
+			
+			int tempScore = min(MAX_SCORE, int(score / SCORE_SCALE));
+			for(int i = 1; i <= SCORE_DIGITS; i++) {
+				Image image = fontImage.getRegion(fontWidth * (tempScore % 10), 0, fontWidth, fontHeight);
+				int x = bgRight - fontWidth * i;
+				int y = bgTop;
+				g.drawImage(image, x, y, 0);
+				tempScore /= 10;
+			}
+			if(!(stopped || paused)) {
+				status.elapse(interval);
+				
+				score += interval * speedRatio * SCORE_SCALE * ballCount / TIME_SCALE / RATIO_SCALE;
+				if(ballCount < MAX_BALLS) {
+					if(newBallCountdown <= 0) {
+						$addRandomBall();
+						newBallCountdown = NEW_BALL_INTERVAL;
+					}
+					newBallCountdown -= interval;
+				}
+				
+				speedRatio += interval * RATIO_SCALE / TIME_SCALE / 200;
+				if(speedRatio > MAX_SPEED_RATIO) {
+					speedRatio = MAX_SPEED_RATIO;
+				}
+			}
+			
+			foreach(Bonus bonus : bonuses) {
+				long realX, long realY = bonus.getPosition();
+				if(realY <  0) {
+					bonus.destroy();
+					bonuses.remove(bonuses.indexOf(bonus));
+				}
+				else {
+					Image image = iconsImage.getRegion(iconSize * bonus.getType(), 0, iconSize, iconSize);
+					int x = scale(realX, VIRTUE_BG_LEFT, VIRTUE_BG_RIGHT, bgLeft, bgRight) - iconSize / 2;
+					int y = scale(realY, VIRTUE_BG_BOTTOM, VIRTUE_BG_TOP, bgBottom, bgTop) - horizon - iconSize + 1;
+					g.drawImage(image, x, y, 0);
+					if(!paused) {
+						if(!stopped) {
+							$checkCatch(bonus);
+						}
+						bonus.elapse(interval);
+					}
+				}
+			}
+			
+			foreach(Ball ball : bigBalls) {
+				long realX, long realY = ball.getPosition();
+				int x = scale(realX, VIRTUE_BG_LEFT, VIRTUE_BG_RIGHT, bgLeft, bgRight) - BALL_ICON_SIZE / 2;
+				int y = scale(realY, VIRTUE_BG_BOTTOM, VIRTUE_BG_TOP, bgBottom, bgTop) - horizon - BALL_ICON_SIZE + 1;
+				g.drawImage(bigBallImage, x, y, 0);
+				if(statusType != Status_timeStopped && !paused) {
+					if(!stopped) {
+						$checkHit(ball);
+					}
+					ball.elapse(interval * speedRatio / RATIO_SCALE);
+				}
+			}
+			foreach(Ball ball : smallBalls) {
+				long realX, long realY = ball.getPosition();
+				int x = scale(realX, VIRTUE_BG_LEFT, VIRTUE_BG_RIGHT, bgLeft, bgRight) - BALL_ICON_SIZE / 2;
+				int y = scale(realY, VIRTUE_BG_BOTTOM, VIRTUE_BG_TOP, bgBottom, bgTop) - horizon - BALL_ICON_SIZE + 1;
+				g.drawImage(smallBallImage, x, y, 0);
+				if(statusType != Status_timeStopped && !paused) {
+					if(!stopped) {
+						$checkHit(ball);
+					}
+					ball.elapse(interval * speedRatio / RATIO_SCALE);
+				}
+			}
+			
+			if(!(paused || stopped)) {
+				if(random(RATE_SCALE / TIME_SCALE) < BONUS_DROP_RATE * interval / TIME_SCALE) {
+					$addBonus();
+				}
+				
+				if(status.getType() == Status_confused) {
+					if(leftPressed && !rightPressed) {
+						character.moveRight(interval);
+					}
+					else if(!leftPressed && rightPressed) {
+						character.moveLeft(interval);
+					}
+				}
+				else {
+					if(leftPressed && !rightPressed) {
+						character.moveLeft(interval);
+					}
+					else if(!leftPressed && rightPressed) {
+						character.moveRight(interval);
+					}
+				}
+			}
+			int characterX = scale(character.getPosition(), VIRTUE_BG_LEFT, VIRTUE_BG_RIGHT, bgLeft, bgRight) - characterSize / 2;
+			int characterY = bgBottom - horizon - characterSize + 1;
+			if(characterImage != null) {
+				g.drawImage(characterImage, characterX, characterY, 0);
+			}
+			
+			if(stopped) {
+				Image image = Image(gameOverSlide.elapse(interval).getCurrent());
+				int x = (canvasWidth - image.width()) / 2;
+				int y = (canvasHeight - image.height()) / 2;
+				g.drawImage(image, x, y, 0);
+			}
+			else if(paused) {
+				Image image = Image(pauseSlide.elapse(interval).getCurrent());
+				int x = (canvasWidth - image.width()) / 2;
+				int y = (canvasHeight - image.height()) / 2;
+				g.drawImage(image, x, y, 0);
+			}
+			
+			standSlide.elapse(interval);
+			if(!(paused || stopped)) {
+				timeSlide.elapse(interval);
+			}
+			
+			$startTimer();
+		}
+		
+		void $onTimer(Timer timer) {
+			canvas.repaint(true);
+			flushScreen(false);
+		}
+		
+		void $startTimer() {
+			$stopTimer();
+			timer = schedule(refreshInterval, $onTimer);
+		}
+		
+		void $stopTimer() {
+			if(timer != null) {
+				timer.cancel();
+				timer = null;
+			}
+		}
+		
+		Ball $createBigBall() {
+			long vx = random(VIRTUE_GROUND_WIDTH / 3) / TIME_SCALE;
+			long maxHeight = random(VIRTUE_GROUND_HEIGHT / 4 + 1) + 3 * VIRTUE_GROUND_HEIGHT / 4;
+			long leftBorder = VIRTUE_BIG_BALL_RADIUS - VIRTUE_GROUND_WIDTH / 2;
+			long rightBorder = -leftBorder;
+			long x = random(rightBorder - leftBorder + 1) + leftBorder;
+			long y = random(maxHeight / 2 + 1) + maxHeight / 2;
+			return Ball_create(x, y, vx, maxHeight, leftBorder, rightBorder);
+		}
+		
+		Ball $createSmallBall() {
+			long vx = random(VIRTUE_GROUND_WIDTH / 3) / TIME_SCALE;
+			long maxHeight = random(VIRTUE_GROUND_HEIGHT / 4 + 1) + VIRTUE_GROUND_HEIGHT;
+			long leftBorder = VIRTUE_SMALL_BALL_RADIUS - VIRTUE_GROUND_WIDTH / 2;
+			long rightBorder = -leftBorder;
+			long x = random(rightBorder - leftBorder + 1) + leftBorder;
+			long y = random(maxHeight / 2 + 1) + maxHeight / 2;
+			return Ball_create(x, y, vx, maxHeight, leftBorder, rightBorder);
+		}
+		
+		void $addBigBall() {
+			bigBalls.add($createBigBall());
+			ballCount++;
+		}
+		
+		void $addSmallBall() {
+			smallBalls.add($createSmallBall());
+			ballCount++;
+		}
+		
+		void $addRandomBall() {
+			if(random(2)) {
+				$addBigBall();
+			}
+			else {
+				$addSmallBall();
+			}
+		}
+		
+		void $clearBalls() {
+			foreach(Ball ball : bigBalls) {
+				ball.destroy();
+			}
+			bigBalls.clear();
+			
+			foreach(Ball ball : smallBalls) {
+				ball.destroy();
+			}
+			smallBalls.clear();
+			
+			ballCount = 0;
+		}
+		
+		void $checkHit(Ball ball) {
+			long ballX, long ballY = ball.getPosition();
+			long characterX = character.getPosition();
+			long characterLeft = characterX - VIRTUE_CHARACTER_WIDTH / 2;
+			long characterRight = characterX + VIRTUE_CHARACTER_WIDTH / 2;
+			
+			if(ballX > characterLeft && ballX < characterRight && ballY < VIRTUE_CHARACTER_HEIGHT) {
+				$onHit(ball);
+			}
+		}
+		
+		void $onHit(Ball ball) {
+			int statusType = status.getType();
+			if(statusType != Status_justHit) {
+				int index = 0;
+				if((index = bigBalls.indexOf(ball)) >= 0) {
+					bigBalls.remove(index);
+					ballCount--;
+				}
+				else if((index = smallBalls.indexOf(ball)) >= 0) {
+					smallBalls.remove(index);
+					ballCount--;
+				}
+				
+				if(statusType != Status_shielded) {
+					$getHurt();
+				}
+			}
+		}
+		
+		void $addBonus() {
+			bonuses.add(Bonus_create());
+		}
+		
+		void $clearBonuses() {
+			foreach(Bonus bonus : bonuses) {
+				bonus.destroy();
+			}
+			bonuses.clear();
+		}
+		
+		void $checkCatch(Bonus bonus) {
+			long bonusX, long bonusY = bonus.getPosition();
+			long characterX = character.getPosition();
+			long characterLeft = characterX - VIRTUE_CHARACTER_WIDTH / 2;
+			long characterRight = characterX + VIRTUE_CHARACTER_WIDTH / 2;
+			
+			if(bonusX > characterLeft && bonusX < characterRight && bonusY < VIRTUE_CHARACTER_HEIGHT) {
+				$onCatch(bonus);
+			}
+		}
+		
+		void $onCatch(Bonus bonus) {
+			int statusType = status.getType();
+			bonuses.remove(bonuses.indexOf(bonus));
+			
+			switch(bonus.getType()) {
+				case BONUS_LIFE:
+				{
+					$lifeUp();
+					return;
+				}
+				
+				case BONUS_SCORE:
+				{
+					score += 200 * SCORE_SCALE;
+					return;
+				}
+				
+				case BONUS_SPEED_DOWN:
+				{
+					speedRatio = speedRatio * 9 / 10;
+					return;
+				}
+				
+				case BONUS_SHIELD:
+				{
+					status.setToShielded(5 * TIME_SCALE);
+					shieldSlide.resetTimer();
+					return;
+				}
+			}
+		}
+		
+		void $lifeUp() {
+			if(++lives > FULL_LIVES) {
+				lives = FULL_LIVES;
+				score += 100 * SCORE_SCALE;
+			}
+		}
+		
+		void $getHurt() {
+			status.setToJustHit(HIT_RECOVERY_DURATION);
+			hitSlide.resetTimer();
+			if(--lives == 0) {
+				$gameOver();
+			}
+			speedRatio = speedRatio * 9 / 10;
+		}
+		
+		void $reset() {
+			$clearBalls();
+			$clearBonuses();
+			timeSlide.resetTimer();
+			character.reset();
+			score = 0;
+			status.setToShielded(START_COUNTDOWN);
+			lives = FULL_LIVES;
+			ballCount = 0;
+			newBallCountdown = 0;
+			speedRatio = RATIO_SCALE;
+			paused = false;
+			stopped = false;
+		}
+		
+		void $pause() {
+			pauseSlide.resetTimer();
+			paused = true;
+		}
+		
+		void $resume() {
+			paused = false;
+		}
+		
+		void $gameOver() {
+			$clearBonuses();
+			koSlide.resetTimer();
+			gameOverSlide.resetTimer();
+			stopped = true;
+		}
+		
+	}
+	#end
+	
+}

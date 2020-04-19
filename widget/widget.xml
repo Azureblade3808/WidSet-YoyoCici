@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<widget spec_version="2.0">
+	<info>
+		<name>Yoyo&amp;Cici Dodge Ball</name>
+		<version>0.1</version>
+		<author>Chris Fu</author>
+		<shortdescription>Mini Game</shortdescription>
+	</info>
+	<resources>
+		<code src="YoyoCici.he"/>
+		<img src="bg_hill_bottomLeft.png" scale="true"/>
+		<img src="bg_hill_bottomRight.png" scale="true"/>
+		<img src="bg_tree_bottomLeft.png" scale="true"/>
+		<img src="bg_tree_bottomRight.png" scale="true"/>
+		<img src="bg_tree_topRight.png" scale="true"/>
+		<img src="bg_cloud_topLeft.png" scale="true"/>
+		<img src="bg_cloud_right.png" scale="true"/>
+		<img src="selectFrame.png" scale="true"/>
+		<img src="chicken.png" scale="true"/>
+		<img src="yoyo_portrait.png" scale="true"/>
+		<img src="cici_portrait.png" scale="true"/>
+		<img src="font_5x7.png" scale="false"/>
+		<img src="font_5x9.png" scale="false"/>
+		<img src="font_7x11.png" scale="false"/>
+		<img src="font_9x13.png" scale="false"/>
+		<img src="yoyo_15.png" scale="false"/>
+		<img src="yoyo_21.png" scale="false"/>
+		<img src="yoyo_25.png" scale="false"/>
+		<img src="yoyo_35.png" scale="false"/>
+		<img src="cici_15.png" scale="false"/>
+		<img src="cici_21.png" scale="false"/>
+		<img src="cici_25.png" scale="false"/>
+		<img src="cici_35.png" scale="false"/>
+		<img src="balls.png" scale="false"/>
+		<img src="icons_9.png" scale="false"/>
+		<img src="icons_11.png" scale="false"/>
+		<img src="icons_13.png" scale="false"/>
+		<img src="icons_17.png" scale="false"/>
+		<img src="bg1_280x210.png" scale="false"/>
+		<img src="bg1_200x150.png" scale="false"/>
+		<img src="bg1_160x120.png" scale="false"/>
+		<img src="bg1_120x90.png" scale="false"/>
+		<img src="bg2_280x210.png" scale="false"/>
+		<img src="bg2_200x150.png" scale="false"/>
+		<img src="bg2_160x120.png" scale="false"/>
+		<img src="bg2_120x90.png" scale="false"/>
+		<img src="bg3_280x210.png" scale="false"/>
+		<img src="bg3_200x150.png" scale="false"/>
+		<img src="bg3_160x120.png" scale="false"/>
+		<img src="bg3_120x90.png" scale="false"/>
+		<img src="bg4_280x210.png" scale="false"/>
+		<img src="bg4_200x150.png" scale="false"/>
+		<img src="bg4_160x120.png" scale="false"/>
+		<img src="bg4_120x90.png" scale="false"/>
+		<img src="bg5_280x210.png" scale="false"/>
+		<img src="bg5_200x150.png" scale="false"/>
+		<img src="bg5_160x120.png" scale="false"/>
+		<img src="bg5_120x90.png" scale="false"/>
+		<img src="bg6_280x210.png" scale="false"/>
+		<img src="bg6_200x150.png" scale="false"/>
+		<img src="bg6_160x120.png" scale="false"/>
+		<img src="bg6_120x90.png" scale="false"/>
+		<img src="bg7_280x210.png" scale="false"/>
+		<img src="bg7_200x150.png" scale="false"/>
+		<img src="bg7_160x120.png" scale="false"/>
+		<img src="bg7_120x90.png" scale="false"/>
+		<img src="bg8_280x210.png" scale="false"/>
+		<img src="bg8_200x150.png" scale="false"/>
+		<img src="bg8_160x120.png" scale="false"/>
+		<img src="bg8_120x90.png" scale="false"/>
+		<img src="paused_0.png" scale="false"/>
+		<img src="paused_1.png" scale="false"/>
+		<img src="paused_2.png" scale="false"/>
+		<img src="paused_3.png" scale="false"/>
+		<img src="gameOver_0.png" scale="false"/>
+		<img src="gameOver_1.png" scale="false"/>
+		<img src="gameOver_2.png" scale="false"/>
+		<img src="gameOver_3.png" scale="false"/>
+		<stylesheet><![CDATA[
+min {
+	align: hcenter vcenter;
+	background: solid skyblue;
+	color: purple;
+	font: bold;
+	height: 100%;
+	width: 100%;
+}
+canvas {
+	background: solid #e4f7ff;
+	height: 100%;
+	width: 100%;
+}
+		]]></stylesheet>
+	</resources>
+	<layout minimizedheight="60sp">
+		<view id="min">
+			<label class="min">Yoyo&amp;Cici</label>
+		</view>
+	</layout>
+</widget>
