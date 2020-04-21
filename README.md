@@ -18,7 +18,7 @@ PS：当时我收到的一个背景音乐是《檄！帝国华击团！》（著
 
 An application on WidSet platform, also called a _Widget_, always contains a file named as `widget.xml`, which declares basic info of the project, an entrance code file, corresponding recourse files and some styles. There is one and only one effective code file, and it has to be written in _Helium_, a programming language used exclusively on WidSet platform. There may be arbitary number of image files, and each image file may be declared scalable or not in `widget.xml`. If declared scalable, a down-sized version of the image file will be contained in the downloaded _Widget_ when the host device has a low resolution. Moreover, audio files in MIDI format are supported. But as _Yoyo & Cici_ did not provide any legal background music, there is no such file in this game.
 
-PS: A piece of background music given to me was cut from _Geki! Teikoku Kagekidan_(famous theme song of _Sakura War_), which apparantly could not be used in this game.
+PS: A piece of background music given to me was cut from _Geki! Teikoku Kagekidan_(famous theme song of _Sakura Wars_), which apparantly could not be used in this game.
 
 _Helium_ 的语法接近于 _Java_ 。比较明显的不同有：
 
