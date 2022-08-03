@@ -1,4 +1,4 @@
-# 诺基亚维信 - 悠嘻猴躲避球 Nokia WidSet - Yoyo & Cici Doge Ball
+# 诺基亚维信 - 悠嘻猴躲避球 Nokia WidSet - Yoyo & Cici Dodge Ball
 
 ## 介绍 Intro
 
